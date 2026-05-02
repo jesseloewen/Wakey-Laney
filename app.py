@@ -33,7 +33,7 @@ PASSWORD_ATTEMPT_MAX_FAILURES = 6
 PASSWORD_ATTEMPT_LOCKOUT_SECONDS = 120
 FAILED_PASSWORD_ATTEMPTS: dict[str, dict] = {}
 REMEMBER_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
-REMEMBER_COOKIE_PREFIX = "wolrm"
+REMEMBER_COOKIE_PREFIX = "wakeylaneyrm"
 REMEMBER_COOKIE_VERSION = "v1"
 
 
@@ -227,7 +227,7 @@ def get_remember_cookie_secret(config: dict) -> str:
   configured_secret = str(config.get("remember_cookie_secret", "")).strip()
   if configured_secret:
     return configured_secret
-  return f"wol-flask-local-secret::{Path(__file__).resolve()}"
+  return f"wakey-laney-local-secret::{Path(__file__).resolve()}"
 
 
 def get_remember_cookie_name(device_id: str, app_port: int) -> str:

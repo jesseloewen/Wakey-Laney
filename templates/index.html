@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Wake Device Manager</title>
+  <title>Wakey Laney</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -14,8 +14,8 @@
       <div class="panel-head">
         <div class="list-head">
           <div class="title-wrap">
-            <img src="{{ url_for('static', filename='img/icon.png') }}" alt="Wake Device Manager icon" class="page-icon" width="54" height="54">
-            <h1>Devices</h1>
+            <img src="{{ url_for('static', filename='img/icon.png') }}" alt="Wakey Laney icon" class="page-icon" width="54" height="54">
+            <h1>Wakey Laney</h1>
           </div>
           <span id="deviceCount" class="pill">0 devices</span>
         </div>
@@ -37,7 +37,7 @@
       <h3 id="passwordModalTitle">Password Required</h3>
       <p id="passwordModalMessage">Enter password to continue.</p>
       <input id="passwordModalInput" type="password" autocomplete="current-password" placeholder="Device password">
-      <label class="checkline"><input id="passwordModalRemember" type="checkbox">Remember password for this device on this browser</label>
+      <label class="checkline"><input id="passwordModalRemember" type="checkbox" checked>Remember me</label>
       <div id="passwordModalError" class="modal-error" aria-live="polite"></div>
       <div class="modal-actions">
         <button id="passwordModalCancel" type="button" class="ghost-btn">Cancel</button>
