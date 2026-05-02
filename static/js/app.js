@@ -24,7 +24,7 @@
     const confirmModalCancel = document.getElementById("confirmModalCancel");
     const confirmModalConfirm = document.getElementById("confirmModalConfirm");
     const COOKIE_UNLOCK_SENTINEL = "__cookie_unlock__";
-    const state = { devices: [], unlockedPasswords: {}, draftDevice: null, lastRememberChoice: false };
+    const state = { devices: [], unlockedPasswords: {}, draftDevice: null, lastRememberChoice: true };
 
     function escapeHtml(value) {
       return String(value)
@@ -76,7 +76,7 @@
       passwordModalMessage.textContent = message;
       passwordModalConfirm.textContent = confirmLabel;
       passwordModalInput.value = "";
-      passwordModalRemember.checked = !!options?.rememberChecked;
+      passwordModalRemember.checked = options?.rememberChecked === undefined ? true : !!options.rememberChecked;
       passwordModalError.textContent = "";
       showModal(passwordModal);
 
