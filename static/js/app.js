@@ -2,7 +2,6 @@
     const toggleSetupBtn = document.getElementById("toggleSetupBtn");
     const globalStatus = document.getElementById("globalStatus");
     const devicesRoot = document.getElementById("devices");
-    const deviceCount = document.getElementById("deviceCount");
     const passwordModal = document.getElementById("passwordModal");
     const passwordModalTitle = document.getElementById("passwordModalTitle");
     const passwordModalMessage = document.getElementById("passwordModalMessage");
@@ -529,7 +528,6 @@
     function renderDevices() {
       const total = state.devices.length;
       const hasDraft = !!state.draftDevice;
-      deviceCount.textContent = total + (total === 1 ? " device" : " devices");
       devicesRoot.innerHTML = "";
 
       if (total === 0 && !hasDraft) {
