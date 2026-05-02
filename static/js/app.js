@@ -75,7 +75,12 @@
       passwordModalMessage.textContent = message;
       passwordModalConfirm.textContent = confirmLabel;
       passwordModalInput.value = "";
-      passwordModalRemember.checked = options?.rememberChecked === undefined ? true : !!options.rememberChecked;
+      const hideRemember = !!options?.hideRemember;
+      const rememberLabel = passwordModalRemember.closest("label");
+      if (rememberLabel) {
+        rememberLabel.hidden = hideRemember;
+      }
+      passwordModalRemember.checked = hideRemember ? false : (options?.rememberChecked === undefined ? true : !!options.rememberChecked);
       passwordModalError.textContent = "";
       showModal(passwordModal);
 
@@ -107,10 +112,12 @@
             passwordModalInput.focus();
             return;
           }
-          state.lastRememberChoice = passwordModalRemember.checked;
+          if (!hideRemember) {
+            state.lastRememberChoice = passwordModalRemember.checked;
+          }
           finish({
             password: value,
-            rememberPassword: passwordModalRemember.checked,
+            rememberPassword: hideRemember ? false : passwordModalRemember.checked,
           });
         };
 
@@ -691,7 +698,8 @@
 
     async function handlePasswordChangeForRow(row, options) {
       const context = options || {};
-      const change = await openChangePasswordDialog(false);
+      const hasPassword = row.dataset.hasPassword === "true";
+      const change = await openChangePasswordDialog(hasPassword);
       if (!change) {
         setRowStatus(row, "warning", "Password change canceled.");
         return;
@@ -709,16 +717,10 @@
         return;
       }
 
-      const hasPassword = row.dataset.hasPassword === "true";
       const body = { new_password: change.newPassword };
       if (hasPassword) {
-        const unlockedPassword = state.unlockedPasswords[context.deviceId] || "";
-        if (!unlockedPassword) {
-          throw new Error("Unlock expired. Re-open edit to change password.");
-        }
-        if (unlockedPassword !== COOKIE_UNLOCK_SENTINEL) {
-          body.password = unlockedPassword;
-        }
+        body.current_password = change.currentPassword;
+        body.password = change.currentPassword;
       }
 
       await api("/api/devices/" + context.deviceId, jsonOptions("PUT", body));
@@ -740,18 +742,6 @@
         return;
       }
 
-      const confirmed = await openConfirmDialog({
-        title: context.isDraft ? "Remove Draft Password" : "Remove Device Password",
-        message: context.isDraft
-          ? "Remove the password from this draft device?"
-          : "Remove password protection from this device?",
-        confirmLabel: "Remove Password"
-      });
-      if (!confirmed) {
-        setRowStatus(row, "warning", "Password removal canceled.");
-        return;
-      }
-
       if (context.isDraft) {
         if (!state.draftDevice) {
           throw new Error("Draft device is no longer available.");
@@ -764,15 +754,21 @@
         return;
       }
 
-      const unlockedPassword = state.unlockedPasswords[context.deviceId] || "";
-      if (!unlockedPassword) {
-        throw new Error("Unlock expired. Re-open edit to remove password.");
+      const credential = await openPasswordDialog({
+        title: "Remove Device Password",
+        message: "Enter current password to remove password protection.",
+        confirmLabel: "Remove Password",
+        hideRemember: true,
+      });
+      if (!credential) {
+        setRowStatus(row, "warning", "Password removal canceled.");
+        return;
       }
 
-      const body = {};
-      if (unlockedPassword !== COOKIE_UNLOCK_SENTINEL) {
-        body.password = unlockedPassword;
-      }
+      const body = {
+        password: credential.password,
+        current_password: credential.password,
+      };
 
       await api(
         "/api/devices/" + context.deviceId + "/password",

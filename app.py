@@ -308,10 +308,29 @@ def require_device_password(device: dict, payload: dict, config: dict) -> tuple[
   return None, True
 
 
+def require_explicit_current_password(device: dict, payload: dict) -> str | None:
+  if not device_has_password(device):
+    return None
+
+  lockout_error = check_password_lockout(device.get("id", ""))
+  if lockout_error:
+    return lockout_error
+
+  current_password = str(payload.get("current_password", ""))
+  if not current_password:
+    return "Current password is required for this action."
+
+  if not verify_device_password(device, current_password):
+    return register_password_failure(device.get("id", ""))
+
+  clear_password_failures(device.get("id", ""))
+  return None
+
+
 def password_error_status(error_message: str) -> int:
   if error_message.startswith("Too many failed"):
     return 429
-  if error_message.startswith("Password is required"):
+  if error_message.startswith("Password is required") or error_message.startswith("Current password is required"):
     return 401
   return 403
 
@@ -649,6 +668,11 @@ def update_device(device_id: str):
         if remove_password and new_password_raw.strip():
           return jsonify({"error": "Cannot set and remove password in the same update."}), 400
 
+        if had_password_before and (remove_password or new_password_raw.strip()):
+          current_password_error = require_explicit_current_password(device, payload)
+          if current_password_error:
+            return jsonify({"error": current_password_error}), password_error_status(current_password_error)
+
         password_salt = str(device.get("password_salt", "")).strip()
         password_hash = str(device.get("password_hash", "")).strip()
         try:
@@ -750,9 +774,9 @@ def remove_device_password(device_id: str):
             if not device_has_password(device):
                 return jsonify({"error": "This device has no password set."}), 400
 
-            password_error, _authenticated_with_password = require_device_password(device, payload, config)
-            if password_error:
-                return jsonify({"error": password_error}), password_error_status(password_error)
+            current_password_error = require_explicit_current_password(device, payload)
+            if current_password_error:
+              return jsonify({"error": current_password_error}), password_error_status(current_password_error)
 
             device["password_salt"] = ""
             device["password_hash"] = ""
