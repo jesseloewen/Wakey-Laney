@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wake Device Manager</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <main class="layout">
+    <section class="panel">
+      <div class="panel-head">
+        <div class="list-head">
+          <div class="title-wrap">
+            <img src="{{ url_for('static', filename='img/icon.png') }}" alt="Wake Device Manager icon" class="page-icon" width="54" height="54">
+            <h1>Devices</h1>
+          </div>
+          <span id="deviceCount" class="pill">0 devices</span>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+          <button id="toggleSetupBtn" type="button" class="ghost-btn">Add Device</button>
+        </div>
+        <div id="devices"></div>
+        <div id="globalStatus" aria-live="polite"></div>
+        <p class="hint">Stored device passwords are remembered in browser cookies.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <section id="passwordModal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+      <h3 id="passwordModalTitle">Password Required</h3>
+      <p id="passwordModalMessage">Enter password to continue.</p>
+      <input id="passwordModalInput" type="password" autocomplete="current-password" placeholder="Device password">
+      <label class="checkline"><input id="passwordModalRemember" type="checkbox">Remember password for this device on this browser</label>
+      <div id="passwordModalError" class="modal-error" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button id="passwordModalCancel" type="button" class="ghost-btn">Cancel</button>
+        <button id="passwordModalConfirm" type="button">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="changePasswordModal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="changePasswordModalTitle">
+      <h3 id="changePasswordModalTitle">Change Password</h3>
+      <p>Set a new device password.</p>
+      <div class="field" style="margin:0;">
+        <label for="changePasswordCurrent">Current Password</label>
+        <input id="changePasswordCurrent" type="password" autocomplete="current-password" placeholder="Current password">
+      </div>
+      <div class="field" style="margin:0;">
+        <label for="changePasswordNew">New Password</label>
+        <input id="changePasswordNew" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+      </div>
+      <div class="field" style="margin:0;">
+        <label for="changePasswordRepeat">Confirm New Password</label>
+        <input id="changePasswordRepeat" type="password" autocomplete="new-password" placeholder="Re-enter new password">
+      </div>
+      <div id="changePasswordModalError" class="modal-error" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button id="changePasswordCancel" type="button" class="ghost-btn">Cancel</button>
+        <button id="changePasswordConfirm" type="button">Apply Password</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="confirmModal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+      <h3 id="confirmModalTitle">Please Confirm</h3>
+      <p id="confirmModalMessage">Are you sure?</p>
+      <div class="modal-actions">
+        <button id="confirmModalCancel" type="button" class="ghost-btn">Cancel</button>
+        <button id="confirmModalConfirm" type="button">Confirm</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    window.defaultBroadcast = {{ default_broadcast_ip|tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
