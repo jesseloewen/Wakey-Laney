@@ -25,6 +25,29 @@
     const COOKIE_UNLOCK_SENTINEL = "__cookie_unlock__";
     const state = { devices: [], unlockedPasswords: {}, draftDevice: null, lastRememberChoice: true };
 
+    // --- Cookie-based device order ---
+    function getCookieOrder() {
+      const match = document.cookie.split('; ').find(row => row.startsWith('device_order='));
+      if (!match) return [];
+      try { return JSON.parse(decodeURIComponent(match.split('=').slice(1).join('='))); } catch { return []; }
+    }
+
+    function saveCookieOrder(ids) {
+      const value = encodeURIComponent(JSON.stringify(ids));
+      document.cookie = 'device_order=' + value + '; path=/; max-age=' + (60 * 60 * 24 * 365) + '; SameSite=Lax';
+    }
+
+    function applyDeviceOrder() {
+      const order = getCookieOrder();
+      if (!order.length) return;
+      const orderMap = new Map(order.map((id, i) => [id, i]));
+      state.devices.sort((a, b) => {
+        const ia = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+        const ib = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+        return ia - ib;
+      });
+    }
+
     function escapeHtml(value) {
       return String(value)
         .replaceAll("&", "&amp;")
@@ -550,6 +573,7 @@
         card.className = "device";
         card.dataset.deviceId = device.id;
         card.dataset.hasPassword = device.has_password ? "true" : "false";
+        card.draggable = true;
 
         const label = escapeHtml(displayName(device));
         const mac = escapeHtml(device.mac_address || "");
@@ -647,6 +671,7 @@
     async function loadDevices() {
       const payload = await api("/api/devices");
       state.devices = payload.devices || [];
+      applyDeviceOrder();
       pruneUnlockedPasswords();
       renderDevices();
     }
@@ -1086,6 +1111,186 @@
           item.disabled = false;
         });
       }
+    });
+
+    // --- Drag-and-drop reordering ---
+    let dragEnabled = false;
+    let dragSrcId = null;
+
+    devicesRoot.addEventListener('mousedown', (e) => {
+      dragEnabled = !!e.target.closest('.device-view');
+    });
+
+    devicesRoot.addEventListener('dragstart', (e) => {
+      const row = e.target.closest('.device');
+      if (!dragEnabled || !row || row.dataset.draft === 'true' || row.dataset.editing === 'true') {
+        e.preventDefault();
+        return;
+      }
+      dragSrcId = row.dataset.deviceId;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', dragSrcId);
+    });
+
+    devicesRoot.addEventListener('dragend', () => {
+      dragEnabled = false;
+      dragSrcId = null;
+      devicesRoot.querySelectorAll('.device').forEach(el => {
+        el.classList.remove('dragging', 'drag-over-before', 'drag-over-after');
+      });
+    });
+
+    devicesRoot.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const target = e.target.closest('.device');
+      if (!target || target.dataset.deviceId === dragSrcId || target.dataset.draft === 'true') return;
+      devicesRoot.querySelectorAll('.device').forEach(el => {
+        el.classList.remove('drag-over-before', 'drag-over-after');
+      });
+      const rect = target.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) {
+        target.classList.add('drag-over-before');
+      } else {
+        target.classList.add('drag-over-after');
+      }
+    });
+
+    devicesRoot.addEventListener('dragleave', (e) => {
+      const target = e.target.closest('.device');
+      if (target) {
+        target.classList.remove('drag-over-before', 'drag-over-after');
+      }
+    });
+
+    devicesRoot.addEventListener('drop', (e) => {
+      e.preventDefault();
+      devicesRoot.querySelectorAll('.device').forEach(el => {
+        el.classList.remove('drag-over-before', 'drag-over-after');
+      });
+      const targetRow = e.target.closest('.device');
+      if (!dragSrcId || !targetRow || targetRow.dataset.draft === 'true') return;
+      const targetId = targetRow.dataset.deviceId;
+      if (!targetId || targetId === dragSrcId) return;
+
+      const rect = targetRow.getBoundingClientRect();
+      const insertBefore = e.clientY < rect.top + rect.height / 2;
+      const srcIndex = state.devices.findIndex(d => d.id === dragSrcId);
+      if (srcIndex === -1) return;
+      const [moved] = state.devices.splice(srcIndex, 1);
+      const newTgtIndex = state.devices.findIndex(d => d.id === targetId);
+      if (newTgtIndex === -1) { state.devices.splice(srcIndex, 0, moved); return; }
+      state.devices.splice(insertBefore ? newTgtIndex : newTgtIndex + 1, 0, moved);
+
+      saveCookieOrder(state.devices.map(d => d.id));
+      renderDevices();
+    });
+
+    // --- Touch drag-and-drop reordering (mobile) ---
+    let touchSrcId = null;
+    let touchSrcRow = null;
+    let touchOverRow = null;
+    let touchInsertBefore = false;
+    let touchGhost = null;
+    let touchOffsetX = 0;
+    let touchOffsetY = 0;
+
+    function clearTouchOverIndicators() {
+      devicesRoot.querySelectorAll('.device').forEach(el => {
+        el.classList.remove('drag-over-before', 'drag-over-after');
+      });
+    }
+
+    function createTouchGhost(row, touch) {
+      const rect = row.getBoundingClientRect();
+      const clone = row.cloneNode(true);
+      clone.className = 'device touch-ghost';
+      clone.style.width = rect.width + 'px';
+      clone.style.left = rect.left + 'px';
+      clone.style.top = rect.top + window.scrollY + 'px';
+      document.body.appendChild(clone);
+      touchOffsetX = touch.clientX - rect.left;
+      touchOffsetY = touch.clientY - rect.top;
+      return clone;
+    }
+
+    function moveTouchGhost(touch) {
+      if (!touchGhost) return;
+      touchGhost.style.left = (touch.clientX - touchOffsetX) + 'px';
+      touchGhost.style.top = (touch.clientY - touchOffsetY + window.scrollY) + 'px';
+    }
+
+    function removeTouchGhost() {
+      if (touchGhost) { touchGhost.remove(); touchGhost = null; }
+    }
+
+    devicesRoot.addEventListener('touchstart', (e) => {
+      const view = e.target.closest('.device-view');
+      if (!view) return;
+      const row = view.closest('.device');
+      if (!row || row.dataset.draft === 'true' || row.dataset.editing === 'true') return;
+      touchSrcId = row.dataset.deviceId;
+      touchSrcRow = row;
+      row.classList.add('dragging');
+      touchGhost = createTouchGhost(row, e.touches[0]);
+    }, { passive: true });
+
+    devicesRoot.addEventListener('touchmove', (e) => {
+      if (!touchSrcId) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      moveTouchGhost(touch);
+      // Hide ghost temporarily so elementFromPoint hits the card underneath
+      if (touchGhost) touchGhost.style.display = 'none';
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (touchGhost) touchGhost.style.display = '';
+      const target = el ? el.closest('.device') : null;
+      clearTouchOverIndicators();
+      if (!target || target.dataset.deviceId === touchSrcId || target.dataset.draft === 'true') {
+        touchOverRow = null;
+        return;
+      }
+      const rect = target.getBoundingClientRect();
+      touchInsertBefore = touch.clientY < rect.top + rect.height / 2;
+      touchOverRow = target;
+      target.classList.add(touchInsertBefore ? 'drag-over-before' : 'drag-over-after');
+    }, { passive: false });
+
+    devicesRoot.addEventListener('touchend', () => {
+      if (!touchSrcId) return;
+      removeTouchGhost();
+      clearTouchOverIndicators();
+      if (touchSrcRow) touchSrcRow.classList.remove('dragging');
+
+      if (touchOverRow) {
+        const targetId = touchOverRow.dataset.deviceId;
+        const srcIndex = state.devices.findIndex(d => d.id === touchSrcId);
+        if (srcIndex !== -1 && targetId) {
+          const [moved] = state.devices.splice(srcIndex, 1);
+          const newTgtIndex = state.devices.findIndex(d => d.id === targetId);
+          if (newTgtIndex !== -1) {
+            state.devices.splice(touchInsertBefore ? newTgtIndex : newTgtIndex + 1, 0, moved);
+            saveCookieOrder(state.devices.map(d => d.id));
+            renderDevices();
+          } else {
+            state.devices.splice(srcIndex, 0, moved);
+          }
+        }
+      }
+
+      touchSrcId = null;
+      touchSrcRow = null;
+      touchOverRow = null;
+    });
+
+    devicesRoot.addEventListener('touchcancel', () => {
+      removeTouchGhost();
+      clearTouchOverIndicators();
+      if (touchSrcRow) touchSrcRow.classList.remove('dragging');
+      touchSrcId = null;
+      touchSrcRow = null;
+      touchOverRow = null;
     });
 
     loadDevices().catch((error) => {

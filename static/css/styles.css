@@ -29,6 +29,10 @@
       padding: 20px;
     }
 
+    @media (max-width: 600px) {
+      body { padding: 8px; }
+    }
+
     .layout {
       max-width: 980px;
       margin: 0 auto;
@@ -67,7 +71,7 @@
     }
 
     .panel-body {
-      padding: 16px 18px 18px;
+      padding: 16px 18px 14px;
     }
 
     .field {
@@ -165,14 +169,6 @@
       width: 100%;
     }
 
-    .hint {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 0.85rem;
-      line-height: 1.35;
-      text-align: center;
-    }
-
     button {
       border: 1px solid transparent;
       border-radius: 10px;
@@ -237,15 +233,36 @@
       }
 
       .page-icon {
-        width: 46px;
-        height: 46px;
+        width: 38px;
+        height: 38px;
       }
+
+      .panel-head { padding: 12px 12px 10px; }
+      .panel-body { padding: 10px 12px 14px; }
+
+      .panel h1 { font-size: 1.15rem; }
+
+      .edit-grid { grid-template-columns: 1fr; }
+
+      .lock-options-row { grid-template-columns: 1fr; }
+
+      .edit-actions-row-top { grid-template-columns: 1fr; }
+      .edit-actions-row-top.single-action { grid-template-columns: 1fr; }
+      .edit-actions-row-bottom { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+      button { padding: 9px 10px; font-size: 0.9rem; }
+
+      .device-actions-main button { padding: 9px 4px; font-size: 0.8rem; }
     }
 
     #devices {
       display: grid;
       gap: 12px;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+
+    @media (max-width: 600px) {
+      #devices { grid-template-columns: 1fr; gap: 8px; }
     }
 
     .empty {
@@ -434,10 +451,13 @@
     }
 
     .row-status {
-      min-height: 20px;
       color: var(--muted);
       font-size: 0.88rem;
       font-weight: 600;
+    }
+
+    .row-status:empty {
+      display: none;
     }
 
     .status-success { color: var(--success); }
@@ -508,5 +528,39 @@
       justify-content: flex-end;
       gap: 8px;
       flex-wrap: wrap;
+    }
+
+    /* Drag zone: the entire top view area acts as grab handle */
+    .device:not([data-editing="true"]) .device-view {
+      cursor: grab;
+      user-select: none;
+    }
+
+    .device:not([data-editing="true"]) .device-view:active {
+      cursor: grabbing;
+    }
+
+    .device.dragging {
+      opacity: 0.35;
+    }
+
+    /* Floating ghost clone during touch drag */
+    .touch-ghost {
+      position: absolute;
+      z-index: 999;
+      pointer-events: none;
+      opacity: 0.85;
+      transform: scale(1.03) rotate(1deg);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+      transition: none;
+      animation: none;
+    }
+
+    .device.drag-over-before {
+      border-top: 2px solid var(--accent);
+    }
+
+    .device.drag-over-after {
+      border-bottom: 2px solid var(--accent);
     }
   
