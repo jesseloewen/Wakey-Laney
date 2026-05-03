@@ -466,12 +466,9 @@ def ping_target(target: str, timeout_ms: int) -> tuple[bool, str]:
     completed = subprocess.run(command, capture_output=True, text=True)
 
     if completed.returncode == 0:
-        return True, f"{target} is online."
+      return True, "Ping successful."
 
-    detail = (completed.stderr or completed.stdout or "No response").strip()
-    if len(detail) > 180:
-        detail = detail[:180].rstrip() + "..."
-    return False, f"{target} is offline ({detail})."
+    return False, "Ping failed."
 
 
 def find_device(devices: list[dict], device_id: str) -> tuple[int, dict | None]:
@@ -872,7 +869,7 @@ def ping_device(device_id: str):
   except OSError as err:
     return jsonify({"error": f"Ping command failed: {err}", "online": False}), 500
 
-  response = jsonify({"online": online, "target": target, "message": message})
+  response = jsonify({"online": online, "message": message})
   remember_requested = parse_bool(payload.get("remember_password", False), default=False)
   if authenticated_with_password and remember_requested:
     set_remember_cookie(response, device, config)

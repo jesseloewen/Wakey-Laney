@@ -1065,9 +1065,9 @@
             }
             const payload = result.payload;
             if (payload.online) {
-              setRowStatus(row, "success", payload.message || "Device is online.");
+              setRowStatus(row, "success", "Ping successful.");
             } else {
-              setRowStatus(row, "warning", payload.message || "Device is offline.");
+              setRowStatus(row, "warning", "Ping failed.");
             }
             return;
           }
@@ -1077,9 +1077,9 @@
             jsonOptions("POST", body)
           );
           if (payload.online) {
-            setRowStatus(row, "success", payload.message || "Device is online.");
+            setRowStatus(row, "success", "Ping successful.");
           } else {
-            setRowStatus(row, "warning", payload.message || "Device is offline.");
+            setRowStatus(row, "warning", "Ping failed.");
           }
         } else if (action === "save") {
           await handleSaveForRow(row, { isDraft: false, deviceId, device });
